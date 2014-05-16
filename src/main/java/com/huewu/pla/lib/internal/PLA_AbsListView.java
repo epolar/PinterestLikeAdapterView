@@ -16,6 +16,10 @@
 
 package com.huewu.pla.lib.internal;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -38,12 +42,8 @@ import android.widget.Adapter;
 import android.widget.ListAdapter;
 import android.widget.Scroller;
 
-import com.huewu.pla.R;
+import com.huewu.multicolumnlistview.R;
 import com.huewu.pla.lib.DebugUtil;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
 
 /**
  * Base class that can be used to implement virtualized lists of items. A list does
@@ -895,7 +895,6 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
      *
      * @return A view displaying the data associated with the specified position
      */
-    @SuppressWarnings("deprecation")
     View obtainView(int position, boolean[] isScrap) {
         isScrap[0] = false;
         View scrapView;
@@ -1343,6 +1342,12 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
                         }
 
                         if (longClickable) {
+                        	// for long press
+                        	if (mPendingCheckForLongPress == null) {
+                                mPendingCheckForLongPress = new CheckForLongPress();
+                            }
+                            mPendingCheckForLongPress.rememberWindowAttachCount();
+                            postDelayed(mPendingCheckForLongPress, longPressTimeout);
                         } else {
                             mTouchMode = TOUCH_MODE_DONE_WAITING;
                         }
@@ -1778,7 +1783,12 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
         }
     }
     
-    protected void onFlingFinish(){}
+    /**
+     * fling动作结束以后执行
+     */
+    public void onFlingFinish() {
+    	
+    }
 
     /**
      * Responsible for fling behavior. Use {@link #start(int)} to
@@ -2230,7 +2240,6 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
      * @param incrementalDeltaY Change in deltaY from the previous event.
      * @return true if we're already at the beginning/end of the list and have nothing to do.
      */
-    @SuppressWarnings("deprecation")
     boolean trackMotionScroll(int deltaY, int incrementalDeltaY) {
         final int childCount = getChildCount();
         if (childCount == 0) {
@@ -3038,7 +3047,6 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
         /**
          * Move all views remaining in mActiveViews to mScrapViews.
          */
-        @SuppressWarnings("deprecation")
         void scrapActiveViews() {
             final View[] activeViews = mActiveViews;
             final boolean hasListener = mRecyclerListener != null;
@@ -3230,5 +3238,45 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
         if( count == 0 )
             return 0;
         return getChildAt(count - 1).getBottom();
+    }
+    
+    // for long press;
+    CheckForLongPress mPendingCheckForLongPress;
+    private class CheckForLongPress extends WindowRunnnable implements Runnable {
+        public void run() {
+            final int motionPosition = mMotionPosition;
+            final View child = getChildAt(motionPosition - mFirstPosition);
+            if (child != null) {
+                final int longPressPosition = mMotionPosition;
+                final long longPressId = mAdapter.getItemId(mMotionPosition);
+
+                boolean handled = false;
+                if (sameWindow() && !mDataChanged) {
+                    handled = performLongPress(child, longPressPosition, longPressId);
+                }
+                if (handled) {
+                    mTouchMode = TOUCH_MODE_REST;
+                    setPressed(false);
+                    child.setPressed(false);
+                } else {
+                    mTouchMode = TOUCH_MODE_DONE_WAITING;
+                }
+            }
+        }
+    }
+    
+    boolean performLongPress(final View child,
+            final int longPressPosition, final long longPressId) {
+
+        boolean handled = false;
+        if (mOnItemLongClickListener != null) {
+            handled = mOnItemLongClickListener.onItemLongClick(PLA_AbsListView.this, child,
+                    longPressPosition, longPressId);
+        }
+        if (!handled) {
+            mContextMenuInfo = createContextMenuInfo(child, longPressPosition, longPressId);
+            handled = super.showContextMenuForChild(PLA_AbsListView.this);
+        }
+        return handled;
     }
 }//end of class
