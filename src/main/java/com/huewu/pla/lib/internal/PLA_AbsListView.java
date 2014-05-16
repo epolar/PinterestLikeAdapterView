@@ -1777,6 +1777,8 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
             }
         }
     }
+    
+    protected void onFlingFinish(){}
 
     /**
      * Responsible for fling behavior. Use {@link #start(int)} to
@@ -1839,6 +1841,7 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
                 removeCallbacks(mPositionScroller);
             }
             mScroller.forceFinished(true);
+            onFlingFinish();
         }
 
         public void run() {
