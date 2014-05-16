@@ -1784,7 +1784,7 @@ ViewTreeObserver.OnGlobalLayoutListener, ViewTreeObserver.OnTouchModeChangeListe
     }
     
     /**
-     * fling动作结束以后执行
+     * do anything after fling behovior
      */
     public void onFlingFinish() {
     	
